@@ -1,9 +1,11 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 const userRoutes = require('./routes/userRoutes');
-const paperRoutes = require('./routes/paperRoutes'); // Import the paper routes
+const paperRoutes = require('./routes/paperRoutes');
+const libraryRoutes = require('./routes/LibraryRoutes');
+const postRoutes = require('./routes/PostRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes'); // Import the feedback routes
 
 // Load environment variables
 dotenv.config();
@@ -12,12 +14,14 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(express.json()); // Built-in body parser
-app.use(bodyParser.urlencoded({ extended: true })); // For URL-encoded data
+app.use(express.json()); // Use express built-in JSON parser
 
 // Routes
 app.use('/api/users', userRoutes);
-app.use('/api/papers', paperRoutes); // Add the paper routes
+app.use('/api/papers', paperRoutes);
+app.use('/api/library', libraryRoutes); 
+app.use('/api/posts', postRoutes); 
+app.use('/api/feedback', feedbackRoutes); // Feedback routes
 
 // MongoDB Connection
 const connectDB = async () => {
@@ -31,6 +35,11 @@ const connectDB = async () => {
 };
 
 connectDB();
+
+// Default route
+app.get('/', (req, res) => {
+  res.send('API is running...');
+});
 
 // Start server
 app.listen(PORT, () => {
