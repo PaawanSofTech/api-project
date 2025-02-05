@@ -5,14 +5,7 @@ const PostController = require('../controllers/PostController');
 // Create a new post
 router.post('/', PostController.createPost);
 
-// Fetch all posts with minimal data (id, headline, content, url)
-router.get('/minimal', PostController.fetchPostsMinimal);
-
-// Fetch a single post by ID with image only
-router.get('/:id/image', PostController.fetchPostImage);
-
-// Fetch like count and check if the user liked a specific post
-router.get('/:id/likes', PostController.fetchPostLikes);
+router.get('/posts', PostController.fetchPost);
 
 // Update a post
 router.put('/:id', PostController.updatePost);

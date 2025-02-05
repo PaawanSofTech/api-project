@@ -1,162 +1,97 @@
-const { v4: uuidv4 } = require('uuid');
-const bcrypt = require('bcryptjs');
-const User = require('../models/User'); // Assuming you have the User model
+const Question = require("../models/Question");
 
-// Mark paper as viewed
-const markPaperViewed = async (req, res) => {
-    const { userID, paperID } = req.body;
 
-    try {
-        const user = await User.findOne({ userID });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
+// 1️⃣ Get Distinct Chapters Based on Course & Subject
+exports.getDistinctChapters = async (req, res) => {
+  try {
+    const { course, subject } = req.params;
 
-        // Find the paper in the user's papers array
-        const paper = user.papers.find(p => p.paperID === paperID);
-        if (!paper) {
-            return res.status(404).json({ error: 'Paper not found for this user' });
-        }
-
-        // Set the "viewed" bit (bit 0)
-        paper.status |= 1;  // Binary OR operation to set bit 0
-        paper.viewedAt = new Date();
-
-        await user.save();
-        return res.status(200).json({ message: 'Paper viewed successfully', user });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+    if (!course || !subject) {
+      return res.status(400).json({ message: "Course and subject are required!" });
     }
-};
 
-// Mark paper as started
-const markPaperStarted = async (req, res) => {
-    const { userID, paperID } = req.body;
+    const chapters = await Question.find({ course, subject }).distinct("chapter");
 
-    try {
-        const user = await User.findOne({ userID });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        // Find the paper in the user's papers array
-        const paper = user.papers.find(p => p.paperID === paperID);
-        if (!paper) {
-            return res.status(404).json({ error: 'Paper not found for this user' });
-        }
-
-        // Set the "started" bit (bit 1)
-        paper.status |= 2;  // Binary OR operation to set bit 1
-        paper.startedAt = new Date();
-
-        await user.save();
-        return res.status(200).json({ message: 'Paper started successfully', user });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+    if (!chapters.length) {
+      return res.status(404).json({ message: "No chapters found for the given course and subject!" });
     }
+
+    res.status(200).json(chapters);
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
 };
 
-// Mark paper as completed
-const markPaperCompleted = async (req, res) => {
-    const { userID, paperID, score } = req.body;
+// 2️⃣ Get Distinct Topics Based on Course, Subject & Chapter
+exports.getDistinctTopics = async (req, res) => {
+  try {
+    const { course, subject, chapter } = req.params;
 
-    try {
-        const user = await User.findOne({ userID });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        // Find the paper in the user's papers array
-        const paper = user.papers.find(p => p.paperID === paperID);
-        if (!paper) {
-            return res.status(404).json({ error: 'Paper not found for this user' });
-        }
-
-        // Set the "completed" bit (bit 2)
-        paper.status |= 4;  // Binary OR operation to set bit 2
-        paper.score = score;
-        paper.completedAt = new Date();
-
-        await user.save();
-        return res.status(200).json({ message: 'Paper completed successfully', user });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+    if (!course || !subject || !chapter) {
+      return res.status(400).json({ message: "Course, subject, and chapter are required!" });
     }
-};
 
-// Mark paper as abandoned
-const markPaperAbandoned = async (req, res) => {
-    const { userID, paperID } = req.body;
+    const topics = await Question.find({ course, subject, chapter }).distinct("topic");
 
-    try {
-        const user = await User.findOne({ userID });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        // Find the paper in the user's papers array
-        const paper = user.papers.find(p => p.paperID === paperID);
-        if (!paper) {
-            return res.status(404).json({ error: 'Paper not found for this user' });
-        }
-
-        // Set the "abandoned" bit (bit 3)
-        paper.status |= 8;  // Binary OR operation to set bit 3
-
-        await user.save();
-        return res.status(200).json({ message: 'Paper abandoned successfully', user });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+    if (!topics.length) {
+      return res.status(404).json({ message: "No topics found for the given course, subject, and chapter!" });
     }
+
+    res.status(200).json(topics);
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
 };
 
-// Fetch paper status by userID and paperID
-const fetchPaperStatus = async (req, res) => {
-    const { userID, paperID } = req.params;
 
+
+// 1️⃣ Count Questions Based on Domain & Subject
+exports.countQuestionsByDomainAndSubject = async (req, res) => {
     try {
-        const user = await User.findOne({ userID });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        // Find the paper in the user's papers array
-        const paper = user.papers.find(p => p.paperID === paperID);
-        if (!paper) {
-            return res.status(404).json({ error: 'Paper not found for this user' });
-        }
-
-        // Decode the binary status
-        const status = paper.status;
-        const statusMessages = {
-            viewed: (status & 1) !== 0,
-            started: (status & 2) !== 0,
-            completed: (status & 4) !== 0,
-            abandoned: (status & 8) !== 0,
-        };
-
-        return res.status(200).json({
-            paperID: paper.paperID,
-            status: statusMessages,
-            score: paper.score,
-            viewedAt: paper.viewedAt,
-            startedAt: paper.startedAt,
-            completedAt: paper.completedAt,
-        });
+      const { domain, subject } = req.params;
+  
+      if (!domain || !subject) {
+        return res.status(400).json({ message: "Domain and subject are required!" });
+      }
+  
+      const count = await Question.countDocuments({ course: domain, subject });
+  
+      res.status(200).json({ domain, subject, totalQuestions: count });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+      res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
-};
-
-module.exports = {
-    markPaperViewed,
-    markPaperStarted,
-    markPaperCompleted,
-    markPaperAbandoned,
-    fetchPaperStatus,
-};
+  };
+  
+  // 2️⃣ Count Questions Based on Domain, Subject & Chapter
+  exports.countQuestionsByDomainSubjectChapter = async (req, res) => {
+    try {
+      const { domain, subject, chapter } = req.params;
+  
+      if (!domain || !subject || !chapter) {
+        return res.status(400).json({ message: "Domain, subject, and chapter are required!" });
+      }
+  
+      const count = await Question.countDocuments({ course: domain, subject, chapter });
+  
+      res.status(200).json({ domain, subject, chapter, totalQuestions: count });
+    } catch (error) {
+      res.status(500).json({ message: "Internal Server Error", error: error.message });
+    }
+  };
+  
+  // 3️⃣ Count Questions Based on Domain, Subject, Chapter & Topic
+  exports.countQuestionsByDomainSubjectChapterTopic = async (req, res) => {
+    try {
+      const { domain, subject, chapter, topic } = req.params;
+  
+      if (!domain || !subject || !chapter || !topic) {
+        return res.status(400).json({ message: "Domain, subject, chapter, and topic are required!" });
+      }
+  
+      const count = await Question.countDocuments({ course: domain, subject, chapter, topic });
+  
+      res.status(200).json({ domain, subject, chapter, topic, totalQuestions: count });
+    } catch (error) {
+      res.status(500).json({ message: "Internal Server Error", error: error.message });
+    }
+  };

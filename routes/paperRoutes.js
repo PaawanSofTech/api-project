@@ -1,20 +1,20 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const {
-  markPaperViewed,
-  markPaperStarted,
-  markPaperCompleted,
-  markPaperAbandoned,
-  fetchPaperStatus
-} = require('../controllers/paperController');
+const paperController = require("../controllers/paperController");
 
-// Routes for paper status updates
-router.post('/paper-viewed', markPaperViewed);
-router.post('/paper-started', markPaperStarted);
-router.post('/paper-completed', markPaperCompleted);
-router.post('/paper-abandoned', markPaperAbandoned);
+// ✅ Get Distinct Chapters Based on Course & Subject
+router.get("/chapters/:course/:subject", paperController.getDistinctChapters);
 
-// Route to fetch paper status
-router.get('/paper-status/:userID/:paperID', fetchPaperStatus);
+// ✅ Get Distinct Topics Based on Course, Subject & Chapter
+router.get("/topics/:course/:subject/:chapter", paperController.getDistinctTopics);
+
+// ✅ Count Questions Based on Domain & Subject
+router.get("/count/:domain/:subject", paperController.countQuestionsByDomainAndSubject);
+
+// ✅ Count Questions Based on Domain, Subject & Chapter
+router.get("/count/:domain/:subject/:chapter", paperController.countQuestionsByDomainSubjectChapter);
+
+// ✅ Count Questions Based on Domain, Subject, Chapter & Topic
+router.get("/count/:domain/:subject/:chapter/:topic", paperController.countQuestionsByDomainSubjectChapterTopic);
 
 module.exports = router;

@@ -2,10 +2,13 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const userRoutes = require('./routes/userRoutes');
-const paperRoutes = require('./routes/paperRoutes');
 const libraryRoutes = require('./routes/LibraryRoutes');
 const postRoutes = require('./routes/PostRoutes');
-const feedbackRoutes = require('./routes/feedbackRoutes'); // Import the feedback routes
+const feedbackRoutes = require('./routes/feedbackRoutes');
+const domainRoutes = require("./routes/domainRoutes");
+const paperRoutes = require("./routes/paperRoutes");
+
+
 
 // Load environment variables
 dotenv.config();
@@ -21,7 +24,31 @@ app.use('/api/users', userRoutes);
 app.use('/api/papers', paperRoutes);
 app.use('/api/library', libraryRoutes); 
 app.use('/api/posts', postRoutes); 
-app.use('/api/feedback', feedbackRoutes); // Feedback routes
+app.use('/api/feedback', feedbackRoutes); 
+app.use('/api/domain', domainRoutes);
+app.use("/api/paper", paperRoutes);
+
+// const Question = require("./models/Question");
+
+// async function cleanData() {
+//     try {
+//       const questions = await Question.find({});
+      
+//       for (let question of questions) {
+//         question.course = question.course.trim();
+//         question.subject = question.subject.trim();
+//         question.chapter = question.chapter.trim();
+//         question.topic = question.topic.trim();
+//         await question.save();
+//       }
+  
+//       console.log("Data cleaned successfully!");
+//     } catch (error) {
+//       console.error("Error cleaning data:", error);
+//     }
+//   }
+  
+//   cleanData();
 
 // MongoDB Connection
 const connectDB = async () => {

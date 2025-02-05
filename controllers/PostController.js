@@ -36,57 +36,6 @@ exports.createPost = [
   },
 ];
 
-// Fetch minimal data for all posts (id, headline, content, url)
-exports.fetchPostsMinimal = async (req, res) => {
-  try {
-    const posts = await Post.find({}, '_id headline content url createdAt').sort({ createdAt: -1 });
-    res.status(200).json({ posts });
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching posts', error: error.message });
-  }
-};
-
-// Fetch image for a specific post by ID
-exports.fetchPostImage = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const post = await Post.findById(id, 'image');
-    if (!post) {
-      return res.status(404).json({ message: 'Post not found!' });
-    }
-
-    res.status(200).json({ image: post.image });
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching image', error: error.message });
-  }
-};
-
-// Fetch like count and check if the user liked the post
-exports.fetchPostLikes = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { userID } = req.query; // Assuming userID is passed as a query parameter
-
-    if (!userID) {
-      return res.status(400).json({ message: 'UserID is required!' });
-    }
-
-    const post = await Post.findById(id, 'likeCount');
-    if (!post) {
-      return res.status(404).json({ message: 'Post not found!' });
-    }
-
-    const userLiked = post.likeCount.includes(userID);
-    res.status(200).json({
-      likeCount: post.likeCount.length,
-      userLiked,
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching likes', error: error.message });
-  }
-};
-
 // Update a post
 exports.updatePost = async (req, res) => {
   try {
@@ -131,7 +80,6 @@ exports.likePost = async (req, res) => {
     const { id } = req.params;
     const { userID } = req.body; // Assuming userID is passed in the body
 
-
     if (!userID) {
       return res.status(400).json({ message: 'UserID is required!' });
     }
@@ -152,11 +100,62 @@ exports.likePost = async (req, res) => {
     }
 
     await post.save();
+    
+    // Return isLiked (boolean) and the updated like count
     res.status(200).json({
-      message: userIndex === -1 ? 'Post liked!' : 'Post unliked!',
-      likeCount: post.likeCount.length,
+      isLiked: userIndex === -1,
+      likes: post.likeCount.length,
     });
   } catch (error) {
     res.status(500).json({ message: 'Error toggling like', error: error.message });
   }
 };
+
+// Get posts with pagination
+exports.fetchPost = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Default to page 1
+    const limit = parseInt(req.query.limit) || 10; // Default to 10 posts per page
+    const userID = req.query.userID; // Get userID from query parameters
+    const skip = (page - 1) * limit;
+
+    // Fetch posts with pagination
+    const posts = await Post.find()
+      .sort({ createdAt: -1 }) // Sort by newest first
+      .skip(skip) // Skip previous pages' data
+      .limit(limit); // Limit the number of posts fetched
+
+    // Count total documents in the collection
+    const totalPosts = await Post.countDocuments();
+
+    // Add user-specific like status and like count to posts
+    const updatedPosts = posts.map(post => {
+      // Check if the user has liked this post
+      const isLiked = post.likeCount.includes(userID); // true if userID is in the likeCount array
+      const likeCount = post.likeCount.length; // Number of likes is the length of the likeCount array
+
+      return {
+        id: post._id, // Use post's MongoDB id
+        image: post.image || '', // Placeholder for base64 image (empty if not present)
+        headline: post.headline,
+        content: post.content.length > 100 ? `${post.content.substring(0, 100)}...` : post.content, // Truncate content if too long
+        date: post.createdAt.toISOString().split('T')[0], // Format date (YYYY-MM-DD)
+        likes: likeCount,
+        url: post.url || '', // Provide url if exists
+        isLiked: isLiked, // True/false based on userID's presence in the likeCount array
+      };
+    });
+
+    // Response with data and pagination details
+    res.status(200).json({
+      posts: updatedPosts,
+      currentPage: page,
+      totalPages: Math.ceil(totalPosts / limit),
+      totalPosts,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching posts', error: error.message });
+  }
+};
+
+
