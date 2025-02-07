@@ -61,6 +61,16 @@ const connectDB = async () => {
   }
 };
 
+const testRoutes = require('./routes/testRoutes');
+app.use('/api/test', testRoutes);
+
+const subjectRoutes = require("./routes/subjectRoutes");
+app.use("/api/subjects", subjectRoutes);
+
+const questionRoutes = require("./routes/questionRoutes");
+
+app.use("/api/questions", questionRoutes); // ✅ Now Question API is available under /api/questions
+
 connectDB();
 
 // Default route
